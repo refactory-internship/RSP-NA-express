@@ -18,8 +18,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-
-
 //test database connection
 try {
   sequelize.authenticate();

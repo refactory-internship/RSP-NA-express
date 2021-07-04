@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const multer = require('../middlewares/multer');
 
 //Load auth controllers
 const registerController = require('../controllers/auth/registerController');
@@ -8,7 +9,7 @@ const emailVerificationController = require('../controllers/auth/emailVerificati
 
 // @route POST auth/register
 // @desc Register user
-router.post('/register', registerController.register);
+router.post('/register', multer.single('photo'), registerController.register);
 
 // @route POST auth/login
 // @desc Login with username
