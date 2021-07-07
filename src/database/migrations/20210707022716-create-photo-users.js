@@ -1,35 +1,26 @@
 'use strict';
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('Users', {
+    await queryInterface.createTable('PhotoUsers', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      roleId: {
+      userId: {
         allowNull: false,
         type: Sequelize.INTEGER,
         references: {
-          model: 'Roles',
+          model: 'Users',
           key: 'id'
         }
       },
-      email: {
-        type: Sequelize.STRING,
-        unique: true
-      },
-      password: {
+      cloudinary_public_id: {
         type: Sequelize.STRING
       },
-      username: {
-        type: Sequelize.STRING,
-        unique: true
-      },
-      isActive: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: 0
+      cloudinary_secure_url: {
+        type: Sequelize.STRING
       },
       createdAt: {
         allowNull: false,
@@ -42,6 +33,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('Users');
+    await queryInterface.dropTable('PhotoUsers');
   }
 };

@@ -2,14 +2,13 @@ const bcrypt = require('bcrypt');
 const { sendMail } = require('../../config/transporter');
 const crypto = require('crypto');
 const cloudinary = require('../../config/cloudinary');
+const Queue = require('bull');
+const path = require('path');
 
 //load user model
-const { User, Token } = require('../../database/models');
-
+const { User, Token, PhotoUsers } = require('../../database/models');
 //load input validation
 const validateRegisterInput = require('../../validations/register');
-const sendMailQueue = require('../../config/sendMailQueue');
-const path = require('path');
 
 class registerController {
     static async register(req, res, next) {
@@ -31,56 +30,65 @@ class registerController {
                 }
             }
 
-            const username = req.body.username
-            //timestamp
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const day = now.getDate();
-            const date = day + '_' + month + '_' + year;
-
-            const result = await cloudinary.uploader.upload(req.file.path, {
-                folder: 'rsp-notesApp/users/',
-                public_id: username + '_' + date,
-                overwrite: true
-            });
-
             //form validation
             const { errors, isValid } = validateRegisterInput(req.body);
-            //generate token for newly registered user
-            const newToken = crypto.randomBytes(10).toString('hex');
 
             //check validation
             if (!isValid) {
                 return res.status(400).json(errors);
             }
 
-            const user = await User.create({
+            await User.create({
                 RoleId: 2,
                 email: req.body.email,
                 password: bcrypt.hashSync(req.body.password, 10),
                 username: req.body.username,
-                photo: result.secure_url,
                 isActive: false
-            });
+            }).then((user) => {
+                //generate token for newly registered user
+                const newToken = crypto.randomBytes(10).toString('hex');
+                const username = req.body.username
 
-            console.log(result.secure_url);
+                Token.create({
+                    email: user.email,
+                    token: newToken
+                }).then((token) => {
+                    const data = {
+                        email: user.email,
+                        id: user.id,
+                        token: token.token
+                    }
 
-            const token = await Token.create({
-                email: user.email,
-                token: newToken
-            });
+                    const sendMailQueue = new Queue(`sendMailTo${user.username}`, {
+                        redis: {
+                            host: '127.0.0.1',
+                            port: 6379
+                        }
+                    });
 
-            const data = {
-                email: user.email,
-                id: user.id,
-                token: token.token
-            }
+                    sendMailQueue.add(data);
+                    sendMailQueue.process(async job => {
+                        return await sendMail(job.data.id, job.data.email, job.data.token);
+                    });
+                }).catch((error) => {
+                    res.status(400).json(error);
+                });
 
-            sendMailQueue.add(data);
-
-            sendMailQueue.process(async job => {
-                return await sendMail(job.data.id, job.data.email, job.data.token)
+                cloudinary.uploader.upload(req.file.path, {
+                    folder: 'rsp-notesApp/users/',
+                    public_id: username + '_' + user.id + '_' + 'notesApp',
+                    overwrite: true
+                }).then((result) => {
+                    PhotoUsers.create({
+                        UserId: user.id,
+                        cloudinary_public_id: result.public_id,
+                        cloudinary_secure_url: result.secure_url
+                    });
+                }).catch((error) => {
+                    res.status(400).json(error);
+                });
+            }).catch((error) => {
+                res.status(400).json(error);
             });
 
             res.status(201).json({
