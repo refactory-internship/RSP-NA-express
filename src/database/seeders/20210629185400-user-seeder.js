@@ -9,7 +9,6 @@ module.exports = {
         email: 'admin@mail.com',
         password: bcrypt.hashSync('password', 10),
         username: 'admin.rsp',
-        photo: null,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -19,7 +18,6 @@ module.exports = {
         email: 'fajar@mail.com',
         password: bcrypt.hashSync('password', 10),
         username: 'ffajar.pratama',
-        photo: null,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date()
